@@ -7,6 +7,12 @@ from retrieve import search
 from dotenv import load_dotenv
 from openai import OpenAI
 
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Utano Health Assistant Backend is running!"}
+
 # Load .env variables (including GROQ_API_KEY)
 load_dotenv()
 
