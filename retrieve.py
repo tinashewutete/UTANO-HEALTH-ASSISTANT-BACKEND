@@ -3,20 +3,29 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# File paths
 INDEX_PATH = "faiss_index/index.faiss"
 METADATA_PATH = "faiss_index/chunk_metadata.json"
 MODEL_NAME = "all-MiniLM-L6-v2"
 
-# Load FAISS index, metadata, and encoder model
-def load_retriever():
-    index = faiss.read_index(INDEX_PATH)
-    with open(METADATA_PATH, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-    model = SentenceTransformer(MODEL_NAME)
-    return index, metadata["chunks"], model
+# Global variables for loaded resources
+index = None
+chunks = None
+model = None
 
-# Search top_k matching chunks from Gale encyclopedia
+def load_retriever():
+    global index, chunks, model
+    if index is None or chunks is None or model is None:
+        print("Loading FAISS index, metadata and model...")
+        index = faiss.read_index(INDEX_PATH)
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+            chunks = metadata["chunks"]
+        model = SentenceTransformer(MODEL_NAME)
+        print("FAISS index, metadata, and model loaded.")
+    else:
+        print("Retriever already loaded; reusing.")
+    return index, chunks, model
+
 def search(query, top_k=2):
     index, chunks, model = load_retriever()
     embedding = model.encode([query], convert_to_numpy=True)
@@ -24,12 +33,11 @@ def search(query, top_k=2):
     D, I = index.search(embedding, top_k)
     return [chunks[idx] for idx in I[0] if idx < len(chunks)]
 
-# New function to return a single combined string for OpenAI context
 def get_context_from_query(query, top_k=2):
     chunks = search(query, top_k=top_k)
     return "\n\n".join(chunks)
 
-# Optional CLI test mode
+# CLI test mode remains the same
 if __name__ == "__main__":
     q = input("Enter your question:\n")
     context = get_context_from_query(q)
